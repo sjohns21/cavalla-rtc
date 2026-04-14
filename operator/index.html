@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cavalla RTC</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f6f6f6;
+      color: #111;
+    }
+
+    h1 {
+      margin: 0 0 32px;
+      font-size: 24px;
+      line-height: 1.4;
+    }
+
+    .session-controls {
+      margin: 0 0 18px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-field label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .control-field input {
+      border: 2px solid #222;
+      min-width: 280px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: "Courier New", monospace;
+    }
+
+    .join-room-button {
+      border: 2px solid #222;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 10px 14px;
+      cursor: pointer;
+      height: 42px;
+    }
+
+    .join-room-button.mock-start {
+      border-style: dashed;
+    }
+
+    .join-room-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .room-meta {
+      margin: 0;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .lane {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .box {
+      flex: 1;
+      min-height: 340px;
+      border: 2px solid #222;
+      background: #fff;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      position: relative;
+      overflow: visible;
+      padding: 20px;
+    }
+
+    .box[hidden] {
+      display: none !important;
+    }
+
+    .box-label {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 6px 8px;
+      border: 1px solid #222;
+    }
+
+    .camera-feed {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #111;
+    }
+
+    .panel {
+      width: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(280px, 56vh) auto;
+      gap: 12px;
+    }
+
+    .video-stage {
+      position: relative;
+      border: 2px solid #222;
+      background: #111;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .multi-video-stage {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 8px;
+      box-sizing: border-box;
+      height: 100%;
+    }
+
+    .video-tile {
+      position: relative;
+      min-height: 0;
+      border: 1px solid #333;
+      overflow: hidden;
+    }
+
+    .camera-status {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      font-size: 16px;
+      line-height: 1.4;
+      text-transform: none;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+    }
+
+    .camera-status[hidden] {
+      display: none;
+    }
+
+    .panel-footer {
+      border: 2px solid #222;
+      background: #f8f8f8;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .event-log {
+      margin: 0;
+      padding: 8px;
+      border: 1px solid #bbb;
+      background: #fff;
+      font-size: 14px;
+      line-height: 1.4;
+      height: 90px;
+      overflow: auto;
+      font-family: "Courier New", monospace;
+    }
+
+    .controller-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(56px, 1fr));
+      gap: 8px;
+      max-width: 280px;
+    }
+
+    .controller-row {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .fork-controller-grid {
+      grid-template-columns: minmax(110px, 1fr);
+      max-width: 140px;
+    }
+
+    .controller-grid button {
+      border: 2px solid #222;
+      background: #fff;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 700;
+      padding: 10px 8px;
+      cursor: pointer;
+    }
+
+    .controller-grid button.text-control {
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.2;
+      padding: 12px 8px;
+    }
+
+    .controller-grid button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .controller-grid button.active {
+      background: #222;
+      color: #fff;
+    }
+
+    .empty-cell {
+      visibility: hidden;
+    }
+
+    .operator-command-status {
+      margin: 0;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .heartbeat-status {
+      margin: 0;
+      font-size: 13px;
+      min-height: 18px;
+      font-family: "Courier New", monospace;
+    }
+
+    .livekit-status-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 4px;
+    }
+
+    .livekit-status-item {
+      margin: 0;
+      font-size: 13px;
+      min-height: 18px;
+      font-family: "Courier New", monospace;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 14px;
+      }
+
+      .lane {
+        flex-direction: column;
+      }
+
+      .panel {
+        grid-template-rows: minmax(240px, 44vh) auto;
+      }
+
+      .multi-video-stage {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>project: service that streams videos from fork lift to remote operator. the remote operator can view videos and send commands to fork lift.</h1>
+  <p>client: <a href="https://www.cavalla.ai/" target="_blank" rel="noopener noreferrer">https://www.cavalla.ai/</a></p>
+  <div class="session-controls">
+    <div class="control-field">
+      <label for="room-input">Room / Channel</label>
+      <input id="room-input" type="text" value="cavalla-forklift-operator" autocomplete="off" spellcheck="false" />
+    </div>
+    <button id="join-room-button" class="join-room-button" type="button">Start Session</button>
+    <button id="start-mock-button" class="join-room-button mock-start" type="button" disabled>Mock Forklift</button>
+    <p id="room-meta" class="room-meta">room not connected</p>
+  </div>
+  <div class="lane">
+    <div id="forklift-box" class="box" hidden>
+      <div class="box-label">forklift</div>
+      <div class="panel">
+        <div class="video-stage multi-video-stage">
+          <div class="video-tile">
+            <video id="forklift-camera-1" class="camera-feed" autoplay muted playsinline></video>
+            <div id="camera-status-1" class="camera-status">mock forklift camera idle. start session, then wait for external stream or start local mock camera.</div>
+          </div>
+          <div class="video-tile">
+            <video id="forklift-camera-2" class="camera-feed" autoplay playsinline></video>
+            <div id="camera-status-2" class="camera-status">waiting for additional forklift video stream 2...</div>
+          </div>
+          <div class="video-tile">
+            <video id="forklift-camera-3" class="camera-feed" autoplay playsinline></video>
+            <div id="camera-status-3" class="camera-status">waiting for additional forklift video stream 3...</div>
+          </div>
+          <div class="video-tile">
+            <video id="forklift-camera-4" class="camera-feed" autoplay playsinline></video>
+            <div id="camera-status-4" class="camera-status">waiting for additional forklift video stream 4...</div>
+          </div>
+          <div class="video-tile">
+            <video id="forklift-camera-5" class="camera-feed" autoplay playsinline></video>
+            <div id="camera-status-5" class="camera-status">waiting for additional forklift video stream 5...</div>
+          </div>
+          <div class="video-tile">
+            <video id="forklift-camera-6" class="camera-feed" autoplay playsinline></video>
+            <div id="camera-status-6" class="camera-status">waiting for additional forklift video stream 6...</div>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <p class="panel-title">Forklift Command Feed</p>
+          <pre id="forklift-events" class="event-log">waiting for controller events...</pre>
+          <p id="forklift-heartbeat" class="heartbeat-status">operator heartbeat: waiting...</p>
+        </div>
+      </div>
+    </div>
+    <div id="operator-box" class="box" hidden>
+      <div class="box-label">operator</div>
+      <div class="panel">
+        <div class="video-stage multi-video-stage">
+          <div class="video-tile">
+            <video id="operator-video-1" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-1" class="camera-status">waiting for forklift video stream 1...</div>
+          </div>
+          <div class="video-tile">
+            <video id="operator-video-2" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-2" class="camera-status">waiting for forklift video stream 2...</div>
+          </div>
+          <div class="video-tile">
+            <video id="operator-video-3" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-3" class="camera-status">waiting for forklift video stream 3...</div>
+          </div>
+          <div class="video-tile">
+            <video id="operator-video-4" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-4" class="camera-status">waiting for forklift video stream 4...</div>
+          </div>
+          <div class="video-tile">
+            <video id="operator-video-5" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-5" class="camera-status">waiting for forklift video stream 5...</div>
+          </div>
+          <div class="video-tile">
+            <video id="operator-video-6" class="camera-feed" autoplay playsinline></video>
+            <div id="operator-status-6" class="camera-status">waiting for forklift video stream 6...</div>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <p class="panel-title">Operator Controller</p>
+          <div class="controller-row">
+            <div class="controller-grid">
+              <span class="empty-cell" aria-hidden="true">.</span>
+              <button type="button" data-direction="forward" aria-label="Forward" title="Forward">&#8593;</button>
+              <span class="empty-cell" aria-hidden="true">.</span>
+              <button type="button" data-direction="left" aria-label="Left" title="Left">&#8592;</button>
+              <button type="button" data-direction="backward" aria-label="Backward" title="Backward">&#8595;</button>
+              <button type="button" data-direction="right" aria-label="Right" title="Right">&#8594;</button>
+            </div>
+            <div class="controller-grid fork-controller-grid">
+              <button type="button" class="text-control" data-direction="fork-rise" aria-label="Fork Rise" title="Fork Rise">Fork Rise</button>
+              <button type="button" class="text-control" data-direction="fork-lower" aria-label="Fork Lower" title="Fork Lower">Fork Lower</button>
+            </div>
+          </div>
+          <p id="operator-command-status" class="operator-command-status">connecting controller...</p>
+          <p id="operator-heartbeat-status" class="heartbeat-status">heartbeat transmitter offline</p>
+          <ul class="livekit-status-list" aria-label="LiveKit status">
+            <li id="operator-livekit-room-status" class="livekit-status-item">livekit room: offline</li>
+            <li id="operator-livekit-stream-status" class="livekit-status-item">forklift streams: room offline</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <script>
+    const MOCK_FORKLIFT_STREAMS = 6;
+    const MOCK_FORKLIFT_STREAM_NAME_PREFIX = 'mock-forklift-stream-';
+    const forkliftBox = document.getElementById('forklift-box');
+    const operatorBox = document.getElementById('operator-box');
+    const forkliftVideoSlots = [
+      {
+        video: document.getElementById('forklift-camera-1'),
+        status: document.getElementById('camera-status-1'),
+      },
+      {
+        video: document.getElementById('forklift-camera-2'),
+        status: document.getElementById('camera-status-2'),
+      },
+      {
+        video: document.getElementById('forklift-camera-3'),
+        status: document.getElementById('camera-status-3'),
+      },
+      {
+        video: document.getElementById('forklift-camera-4'),
+        status: document.getElementById('camera-status-4'),
+      },
+      {
+        video: document.getElementById('forklift-camera-5'),
+        status: document.getElementById('camera-status-5'),
+      },
+      {
+        video: document.getElementById('forklift-camera-6'),
+        status: document.getElementById('camera-status-6'),
+      },
+    ];
+    const operatorVideoSlots = [
+      {
+        video: document.getElementById('operator-video-1'),
+        status: document.getElementById('operator-status-1'),
+      },
+      {
+        video: document.getElementById('operator-video-2'),
+        status: document.getElementById('operator-status-2'),
+      },
+      {
+        video: document.getElementById('operator-video-3'),
+        status: document.getElementById('operator-status-3'),
+      },
+      {
+        video: document.getElementById('operator-video-4'),
+        status: document.getElementById('operator-status-4'),
+      },
+      {
+        video: document.getElementById('operator-video-5'),
+        status: document.getElementById('operator-status-5'),
+      },
+      {
+        video: document.getElementById('operator-video-6'),
+        status: document.getElementById('operator-status-6'),
+      },
+    ];
+    const forkliftEvents = document.getElementById('forklift-events');
+    const forkliftHeartbeat = document.getElementById('forklift-heartbeat');
+    const operatorCommandStatus = document.getElementById('operator-command-status');
+    const operatorHeartbeatStatus = document.getElementById('operator-heartbeat-status');
+    const operatorLivekitRoomStatus = document.getElementById('operator-livekit-room-status');
+    const operatorLivekitStreamStatus = document.getElementById('operator-livekit-stream-status');
+    const roomInput = document.getElementById('room-input');
+    const joinRoomButton = document.getElementById('join-room-button');
+    const startMockButton = document.getElementById('start-mock-button');
+    const roomMeta = document.getElementById('room-meta');
+    const controllerButtons = Array.from(document.querySelectorAll('[data-direction]'));
+    const textEncoder = new TextEncoder();
+    const textDecoder = new TextDecoder();
+    const commandHistory = [];
+    const sessionTag = Math.random().toString(36).slice(2, 8);
+    let controlsBound = false;
+    let forkliftRoomRef = null;
+    let mockVideoTracks = [];
+    let mockSourceStream = null;
+    let mockSourceVideo = null;
+    let mockRenderRafId = null;
+    let mockCanvasStreams = [];
+    let mockForkliftCommandFeedActive = false;
+    let sessionConnected = false;
+    let heartbeatIntervalId = null;
+    let lastHeartbeatIso = null;
+    const operatorVideoSlotByTrackSid = new Map();
+    const operatorTrackIsMockBySid = new Map();
+    const forkliftVideoSlotByTrackSid = new Map();
+    controllerButtons.forEach((button) => {
+      button.disabled = true;
+    });
+
+    function setForkliftPrimaryStatus(message) {
+      const primarySlot = forkliftVideoSlots[0];
+      primarySlot.status.hidden = false;
+      primarySlot.status.textContent = message;
+    }
+
+    function getForkliftWaitingStatus(slotIndex) {
+      if (slotIndex === 0) {
+        return 'mock forklift camera idle. start session, then wait for external stream or start local mock camera.';
+      }
+      return `waiting for additional forklift video stream ${slotIndex + 1}...`;
+    }
+
+    function resetForkliftVideoSlots() {
+      forkliftVideoSlotByTrackSid.clear();
+      forkliftVideoSlots.forEach((slot, index) => {
+        slot.video.srcObject = null;
+        slot.status.hidden = false;
+        slot.status.textContent = getForkliftWaitingStatus(index);
+      });
+    }
+
+    function setForkliftVideoSlotsStatus(message) {
+      forkliftVideoSlotByTrackSid.clear();
+      forkliftVideoSlots.forEach((slot) => {
+        slot.video.srcObject = null;
+        slot.status.hidden = false;
+        slot.status.textContent = message;
+      });
+    }
+
+    function stopMockForkliftCameraCapture() {
+      if (mockRenderRafId) {
+        window.cancelAnimationFrame(mockRenderRafId);
+        mockRenderRafId = null;
+      }
+      mockVideoTracks.forEach((track) => {
+        try {
+          track.stop();
+        } catch (error) {
+          console.warn('Unable to stop mock track cleanly:', error);
+        }
+      });
+      mockVideoTracks = [];
+      mockCanvasStreams.forEach((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+      });
+      mockCanvasStreams = [];
+      if (mockSourceStream) {
+        mockSourceStream.getTracks().forEach((track) => track.stop());
+        mockSourceStream = null;
+      }
+      if (mockSourceVideo) {
+        mockSourceVideo.pause();
+        mockSourceVideo.srcObject = null;
+        mockSourceVideo = null;
+      }
+    }
+
+    function resetOperatorVideoSlots(statusPrefix = 'waiting for forklift video stream') {
+      operatorVideoSlotByTrackSid.clear();
+      operatorTrackIsMockBySid.clear();
+      operatorVideoSlots.forEach((slot, index) => {
+        slot.video.srcObject = null;
+        slot.status.hidden = false;
+        slot.status.textContent = `${statusPrefix} ${index + 1}...`;
+      });
+    }
+
+    function setOperatorVideoSlotsStatus(message) {
+      operatorVideoSlotByTrackSid.clear();
+      operatorTrackIsMockBySid.clear();
+      operatorVideoSlots.forEach((slot) => {
+        slot.video.srcObject = null;
+        slot.status.hidden = false;
+        slot.status.textContent = message;
+      });
+    }
+
+    function resolveTrackSid(track, publication) {
+      return publication?.trackSid || publication?.sid || track?.sid || null;
+    }
+
+    function resolveMockStreamSlotIndex(publication, slotCount) {
+      const trackName = publication?.trackName || publication?.name || '';
+      const match = new RegExp(`^${MOCK_FORKLIFT_STREAM_NAME_PREFIX}(\\d+)$`).exec(trackName);
+      if (!match) {
+        return null;
+      }
+      const candidate = Number(match[1]) - 1;
+      if (!Number.isInteger(candidate) || candidate < 0 || candidate >= slotCount) {
+        return null;
+      }
+      return candidate;
+    }
+
+    function getOperatorTrackSummary() {
+      const activeCount = operatorVideoSlotByTrackSid.size;
+      const mockCount = Array.from(operatorTrackIsMockBySid.values()).filter(Boolean).length;
+      const externalCount = Math.max(0, activeCount - mockCount);
+      return { activeCount, mockCount, externalCount };
+    }
+
+    function renderOperatorLivekitStatus(connectionState = 'disconnected') {
+      const normalizedState = String(connectionState || 'disconnected').toLowerCase();
+      operatorLivekitRoomStatus.textContent = `livekit room: ${normalizedState}`;
+      const { activeCount, mockCount, externalCount } = getOperatorTrackSummary();
+      if (activeCount > 0) {
+        if (externalCount > 0 && mockCount > 0) {
+          operatorLivekitStreamStatus.textContent = `forklift streams: ${activeCount} active (${externalCount} external, ${mockCount} mock)`;
+          return;
+        }
+        if (externalCount > 0) {
+          operatorLivekitStreamStatus.textContent = `forklift streams: ${externalCount} external active`;
+          return;
+        }
+        operatorLivekitStreamStatus.textContent = `forklift streams: ${mockCount} mock active`;
+        return;
+      }
+      if (normalizedState === 'connected') {
+        operatorLivekitStreamStatus.textContent = 'forklift streams: waiting for active feed';
+        return;
+      }
+      operatorLivekitStreamStatus.textContent = 'forklift streams: room offline';
+    }
+
+    async function getToken({ identity, name, canPublish, canSubscribe, room }) {
+      const params = new URLSearchParams({
+        identity,
+        name,
+        room,
+        canPublish: String(canPublish),
+        canSubscribe: String(canSubscribe),
+      });
+      const response = await fetch(`/cavalla-rtc/token?${params.toString()}`);
+      const body = await response.json();
+      if (!response.ok) {
+        const reason = body?.error || 'failed to fetch livekit token';
+        throw new Error(reason);
+      }
+      return body;
+    }
+
+    function appendForkliftEvent(message) {
+      commandHistory.unshift(message);
+      if (commandHistory.length > 14) {
+        commandHistory.pop();
+      }
+      forkliftEvents.textContent = commandHistory.join('\n');
+    }
+
+    function setMockForkliftCommandFeedActive(active) {
+      if (mockForkliftCommandFeedActive === active) {
+        return;
+      }
+      mockForkliftCommandFeedActive = active;
+      forkliftBox.hidden = !active;
+      if (active) {
+        appendForkliftEvent(`${new Date().toLocaleTimeString()} | mock forklift command feed online`);
+      } else {
+        appendForkliftEvent(`${new Date().toLocaleTimeString()} | mock forklift command feed offline`);
+      }
+    }
+
+    function normalizeRoomName(rawValue) {
+      const candidate = (rawValue || '').trim();
+      const normalized = candidate.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+      return normalized || 'cavalla-forklift-operator';
+    }
+
+    function resolveRoomName() {
+      return normalizeRoomName(roomInput.value);
+    }
+
+    function renderHeartbeat() {
+      if (!lastHeartbeatIso) {
+        forkliftHeartbeat.textContent = 'operator heartbeat: waiting...';
+        return;
+      }
+      const receivedAt = new Date(lastHeartbeatIso);
+      forkliftHeartbeat.textContent = `operator heartbeat: ${receivedAt.toLocaleTimeString()}`;
+    }
+
+    function setSessionPendingState(isPending) {
+      joinRoomButton.disabled = isPending;
+      roomInput.disabled = isPending;
+    }
+
+    async function startMockForkliftCamera() {
+      if (mockVideoTracks.length || !forkliftRoomRef || !sessionConnected) {
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setForkliftPrimaryStatus('this browser does not support webcam streaming.');
+        return;
+      }
+      startMockButton.disabled = true;
+      setForkliftPrimaryStatus('starting mock forklift webcam...');
+      try {
+        setMockForkliftCommandFeedActive(true);
+        const sourceStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        const sourceVideo = document.createElement('video');
+        sourceVideo.autoplay = true;
+        sourceVideo.muted = true;
+        sourceVideo.playsInline = true;
+        sourceVideo.srcObject = sourceStream;
+        await sourceVideo.play();
+
+        const sourceTrack = sourceStream.getVideoTracks()[0];
+        const sourceSettings = sourceTrack?.getSettings?.() || {};
+        const sourceWidth = Number(sourceSettings.width) || sourceVideo.videoWidth || 1280;
+        const sourceHeight = Number(sourceSettings.height) || sourceVideo.videoHeight || 720;
+        const mockGridColumns = 3;
+        const mockGridRows = 2;
+        const segmentRenderers = Array.from({ length: MOCK_FORKLIFT_STREAMS }, (_, index) => {
+          const col = index % mockGridColumns;
+          const row = Math.floor(index / mockGridColumns);
+          const startX = Math.floor((sourceWidth * col) / mockGridColumns);
+          const endX = col + 1 < mockGridColumns ? Math.floor((sourceWidth * (col + 1)) / mockGridColumns) : sourceWidth;
+          const startY = Math.floor((sourceHeight * row) / mockGridRows);
+          const endY = row + 1 < mockGridRows ? Math.floor((sourceHeight * (row + 1)) / mockGridRows) : sourceHeight;
+          const segmentWidth = Math.max(2, endX - startX);
+          const segmentHeight = Math.max(2, endY - startY);
+          const canvas = document.createElement('canvas');
+          canvas.width = segmentWidth;
+          canvas.height = segmentHeight;
+          const ctx = canvas.getContext('2d', { alpha: false });
+          if (!ctx) {
+            throw new Error(`unable to initialize mock canvas context ${index + 1}`);
+          }
+          return { canvas, ctx, startX, startY, segmentWidth, segmentHeight };
+        });
+
+        const canvasStreams = segmentRenderers.map(({ canvas }) => canvas.captureStream(24));
+        const splitTracks = canvasStreams.map((stream) => stream.getVideoTracks()[0]).filter(Boolean);
+        if (splitTracks.length !== MOCK_FORKLIFT_STREAMS) {
+          throw new Error('unable to create split mock video tracks');
+        }
+
+        const renderFrame = () => {
+          segmentRenderers.forEach(({ ctx, startX, startY, segmentWidth, segmentHeight }) => {
+            ctx.drawImage(sourceVideo, startX, startY, segmentWidth, segmentHeight, 0, 0, segmentWidth, segmentHeight);
+          });
+          mockRenderRafId = window.requestAnimationFrame(renderFrame);
+        };
+        mockRenderRafId = window.requestAnimationFrame(renderFrame);
+
+        mockSourceStream = sourceStream;
+        mockSourceVideo = sourceVideo;
+        mockCanvasStreams = canvasStreams;
+        mockVideoTracks = splitTracks;
+
+        forkliftVideoSlots.slice(0, MOCK_FORKLIFT_STREAMS).forEach((slot, index) => {
+          slot.video.srcObject = new MediaStream([splitTracks[index]]);
+          slot.status.hidden = true;
+        });
+
+        for (const [index, track] of splitTracks.entries()) {
+          await forkliftRoomRef.localParticipant.publishTrack(track, {
+            name: `${MOCK_FORKLIFT_STREAM_NAME_PREFIX}${index + 1}`,
+          });
+        }
+        startMockButton.textContent = 'Mock Forklift Cameras Started';
+      } catch (error) {
+        setMockForkliftCommandFeedActive(false);
+        stopMockForkliftCameraCapture();
+        setForkliftPrimaryStatus('unable to start mock webcam. check permissions.');
+        startMockButton.disabled = false;
+        console.error('Unable to start mock forklift camera:', error);
+      }
+    }
+
+    async function startLiveKitStream() {
+      if (!window.LivekitClient?.Room) {
+        setForkliftPrimaryStatus('livekit sdk failed to load.');
+        return;
+      }
+
+      const roomName = resolveRoomName();
+      roomInput.value = roomName;
+      roomMeta.textContent = `joining room: ${roomName}`;
+      resetForkliftVideoSlots();
+      setForkliftPrimaryStatus('connecting room...');
+      setSessionPendingState(true);
+      const forkliftRoom = new window.LivekitClient.Room();
+      const operatorRoom = new window.LivekitClient.Room();
+      resetOperatorVideoSlots();
+      renderOperatorLivekitStatus('connecting');
+
+      try {
+        const [forkliftAuth, operatorAuth] = await Promise.all([
+          getToken({
+            identity: `forklift-webcam-${sessionTag}`,
+            name: 'Forklift Webcam',
+            room: roomName,
+            canPublish: true,
+            canSubscribe: true,
+          }),
+          getToken({
+            identity: `operator-video-${sessionTag}`,
+            name: 'Operator Video',
+            room: roomName,
+            canPublish: true,
+            canSubscribe: true,
+          }),
+        ]);
+
+        await Promise.all([
+          forkliftRoom.connect(forkliftAuth.url, forkliftAuth.token),
+          operatorRoom.connect(operatorAuth.url, operatorAuth.token),
+        ]);
+        forkliftRoomRef = forkliftRoom;
+        sessionConnected = true;
+        operatorBox.hidden = false;
+        renderOperatorLivekitStatus(operatorRoom.state);
+
+        operatorRoom.on(window.LivekitClient.RoomEvent.ConnectionStateChanged, (state) => {
+          renderOperatorLivekitStatus(state);
+        });
+
+        forkliftRoom.on(window.LivekitClient.RoomEvent.TrackSubscribed, (track, publication) => {
+          if (publication?.kind !== window.LivekitClient.Track.Kind.Video) {
+            return;
+          }
+          if (mockVideoTracks.length > 0) {
+            return;
+          }
+          const trackSid = resolveTrackSid(track, publication);
+          if (!trackSid) {
+            return;
+          }
+
+          let slotIndex = forkliftVideoSlotByTrackSid.get(trackSid);
+          if (slotIndex === undefined) {
+            const preferred = resolveMockStreamSlotIndex(publication, forkliftVideoSlots.length);
+            const occupiedSlotIndexes = Array.from(forkliftVideoSlotByTrackSid.values());
+            if (preferred !== null && !occupiedSlotIndexes.includes(preferred)) {
+              slotIndex = preferred;
+            }
+          }
+          if (slotIndex === undefined) {
+            const occupiedSlotIndexes = Array.from(forkliftVideoSlotByTrackSid.values());
+            slotIndex = forkliftVideoSlots.findIndex((_, index) => (
+              !occupiedSlotIndexes.includes(index)
+            ));
+          }
+
+          if (slotIndex === -1) {
+            console.warn('Received additional forklift video stream but no forklift slot is available.');
+            return;
+          }
+
+          const slot = forkliftVideoSlots[slotIndex];
+          track.attach(slot.video);
+          slot.status.hidden = true;
+          forkliftVideoSlotByTrackSid.set(trackSid, slotIndex);
+        });
+
+        forkliftRoom.on(window.LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication) => {
+          if (publication?.kind !== window.LivekitClient.Track.Kind.Video) {
+            return;
+          }
+          const trackSid = resolveTrackSid(track, publication);
+          if (!trackSid || !forkliftVideoSlotByTrackSid.has(trackSid)) {
+            return;
+          }
+          const slotIndex = forkliftVideoSlotByTrackSid.get(trackSid);
+          const slot = forkliftVideoSlots[slotIndex];
+          track.detach(slot.video);
+          slot.video.srcObject = null;
+          slot.status.hidden = false;
+          slot.status.textContent = getForkliftWaitingStatus(slotIndex);
+          forkliftVideoSlotByTrackSid.delete(trackSid);
+        });
+
+        operatorRoom.on(window.LivekitClient.RoomEvent.TrackSubscribed, (track, publication) => {
+          if (publication?.kind !== window.LivekitClient.Track.Kind.Video) {
+            return;
+          }
+          const trackSid = resolveTrackSid(track, publication);
+          if (!trackSid) {
+            return;
+          }
+
+          let slotIndex = operatorVideoSlotByTrackSid.get(trackSid);
+          if (slotIndex === undefined) {
+            const preferred = resolveMockStreamSlotIndex(publication, operatorVideoSlots.length);
+            const occupiedSlotIndexes = Array.from(operatorVideoSlotByTrackSid.values());
+            if (preferred !== null && !occupiedSlotIndexes.includes(preferred)) {
+              slotIndex = preferred;
+            }
+          }
+          if (slotIndex === undefined) {
+            const occupiedSlotIndexes = Array.from(operatorVideoSlotByTrackSid.values());
+            slotIndex = operatorVideoSlots.findIndex((_, index) => (
+              !occupiedSlotIndexes.includes(index)
+            ));
+          }
+
+          if (slotIndex === -1) {
+            console.warn('Received additional video stream but no operator slot is available.');
+            return;
+          }
+
+          const slot = operatorVideoSlots[slotIndex];
+          track.attach(slot.video);
+          slot.status.hidden = true;
+          operatorVideoSlotByTrackSid.set(trackSid, slotIndex);
+          operatorTrackIsMockBySid.set(trackSid, resolveMockStreamSlotIndex(publication, operatorVideoSlots.length) !== null);
+          renderOperatorLivekitStatus(operatorRoom.state);
+        });
+
+        operatorRoom.on(window.LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication) => {
+          if (publication?.kind !== window.LivekitClient.Track.Kind.Video) {
+            return;
+          }
+          const trackSid = resolveTrackSid(track, publication);
+          if (!trackSid || !operatorVideoSlotByTrackSid.has(trackSid)) {
+            return;
+          }
+          const slotIndex = operatorVideoSlotByTrackSid.get(trackSid);
+          const slot = operatorVideoSlots[slotIndex];
+          track.detach(slot.video);
+          slot.video.srcObject = null;
+          slot.status.hidden = false;
+          slot.status.textContent = `waiting for forklift video stream ${slotIndex + 1}...`;
+          operatorVideoSlotByTrackSid.delete(trackSid);
+          operatorTrackIsMockBySid.delete(trackSid);
+          renderOperatorLivekitStatus(operatorRoom.state);
+        });
+
+        forkliftRoom.on(window.LivekitClient.RoomEvent.DataReceived, (payload) => {
+          try {
+            const message = JSON.parse(textDecoder.decode(payload));
+            if (message.type === 'forklift-heartbeat') {
+              lastHeartbeatIso = message.sentAt || new Date().toISOString();
+              renderHeartbeat();
+              return;
+            }
+            if (message.type === 'forklift-control' && !mockForkliftCommandFeedActive) {
+              return;
+            }
+            const time = new Date(message.sentAt).toLocaleTimeString();
+            appendForkliftEvent(`${time} | ${message.direction} ${message.state}`);
+          } catch (error) {
+            appendForkliftEvent(`received non-command data packet (${payload.length} bytes)`);
+            console.warn('Unable to parse control payload:', error);
+          }
+        });
+
+        async function sendControlCommand(direction, state, button) {
+          const command = {
+            type: 'forklift-control',
+            direction,
+            state,
+            sentAt: new Date().toISOString(),
+          };
+          const bytes = textEncoder.encode(JSON.stringify(command));
+          const reliableKind = window.LivekitClient.DataPacket_Kind?.RELIABLE;
+          if (reliableKind !== undefined) {
+            await operatorRoom.localParticipant.publishData(bytes, reliableKind);
+          } else {
+            await operatorRoom.localParticipant.publishData(bytes);
+          }
+          operatorCommandStatus.textContent = `${direction} ${state}`;
+          if (state === 'pressed') {
+            button.classList.add('active');
+          } else {
+            button.classList.remove('active');
+          }
+        }
+
+        if (!controlsBound) {
+          controllerButtons.forEach((button) => {
+            let isPressed = false;
+            const direction = button.dataset.direction;
+            const press = async () => {
+              if (isPressed) {
+                return;
+              }
+              isPressed = true;
+              try {
+                await sendControlCommand(direction, 'pressed', button);
+              } catch (error) {
+                isPressed = false;
+                operatorCommandStatus.textContent = 'failed to send command';
+                console.error('Unable to send pressed event:', error);
+              }
+            };
+            const release = async () => {
+              if (!isPressed) {
+                return;
+              }
+              isPressed = false;
+              try {
+                await sendControlCommand(direction, 'released', button);
+              } catch (error) {
+                operatorCommandStatus.textContent = 'failed to send command';
+                console.error('Unable to send released event:', error);
+              }
+            };
+            button.addEventListener('pointerdown', () => { void press(); });
+            button.addEventListener('pointerup', () => { void release(); });
+            button.addEventListener('pointercancel', () => { void release(); });
+            button.addEventListener('pointerleave', () => { void release(); });
+          });
+          controlsBound = true;
+        }
+        controllerButtons.forEach((button) => {
+          button.disabled = false;
+        });
+        const sendHeartbeat = async () => {
+          const heartbeat = {
+            type: 'forklift-heartbeat',
+            sentAt: new Date().toISOString(),
+          };
+          const bytes = textEncoder.encode(JSON.stringify(heartbeat));
+          const reliableKind = window.LivekitClient.DataPacket_Kind?.RELIABLE;
+          if (reliableKind !== undefined) {
+            await operatorRoom.localParticipant.publishData(bytes, reliableKind);
+          } else {
+            await operatorRoom.localParticipant.publishData(bytes);
+          }
+        };
+        if (heartbeatIntervalId) {
+          window.clearInterval(heartbeatIntervalId);
+          heartbeatIntervalId = null;
+        }
+        void sendHeartbeat();
+        heartbeatIntervalId = window.setInterval(() => {
+          void sendHeartbeat().catch((error) => {
+            operatorHeartbeatStatus.textContent = 'heartbeat send failed';
+            console.error('Unable to send heartbeat:', error);
+          });
+        }, 1000);
+        operatorCommandStatus.textContent = 'controller ready';
+        operatorHeartbeatStatus.textContent = 'sending heartbeat every 1s';
+        roomMeta.textContent = `connected to room: ${roomName}`;
+        renderOperatorLivekitStatus(operatorRoom.state);
+        setForkliftPrimaryStatus('connected. waiting for external forklift stream or start local mock camera.');
+        startMockButton.disabled = false;
+        renderHeartbeat();
+        window.history.replaceState({}, '', `${window.location.pathname}?room=${encodeURIComponent(roomName)}`);
+      } catch (error) {
+        setForkliftVideoSlotsStatus('unable to start session. check livekit env vars and room connectivity.');
+        setOperatorVideoSlotsStatus('operator video is offline.');
+        operatorCommandStatus.textContent = 'controller offline';
+        operatorHeartbeatStatus.textContent = 'heartbeat transmitter offline';
+        renderOperatorLivekitStatus('disconnected');
+        roomMeta.textContent = 'failed to connect room';
+        operatorBox.hidden = true;
+        sessionConnected = false;
+        forkliftRoomRef = null;
+        setMockForkliftCommandFeedActive(false);
+        if (heartbeatIntervalId) {
+          window.clearInterval(heartbeatIntervalId);
+          heartbeatIntervalId = null;
+        }
+        startMockButton.disabled = true;
+        controllerButtons.forEach((button) => {
+          button.disabled = true;
+        });
+        setSessionPendingState(false);
+        console.error('Unable to start LiveKit stream:', error);
+      }
+    }
+
+    roomInput.value = normalizeRoomName(new URLSearchParams(window.location.search).get('room') || roomInput.value);
+    roomMeta.textContent = `ready to join: ${roomInput.value}`;
+    joinRoomButton.addEventListener('click', () => {
+      void startLiveKitStream();
+    });
+    startMockButton.addEventListener('click', () => {
+      void startMockForkliftCamera();
+    });
+    roomInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      void startLiveKitStream();
+    });
+  </script>
+</body>
+</html>
