@@ -91,7 +91,10 @@ async def publish_frames(
 
     try:
         while not stop_event.is_set():
-            raw, ts_us = await asyncio.wait_for(frame_queue.get(), timeout=5.0)
+            try:
+                raw, ts_us = await asyncio.wait_for(frame_queue.get(), timeout=5.0)
+            except asyncio.TimeoutError:
+                continue  # camera may be reconnecting; keep waiting
 
             video_frame = rtc.VideoFrame(
                 width=WIDTH,
@@ -105,8 +108,6 @@ async def publish_frames(
             if frames_sent % 100 == 0:
                 elapsed = time.monotonic() - t0
                 print(f"Sent {frames_sent} frames ({frames_sent / elapsed:.1f} fps)")
-    except asyncio.TimeoutError:
-        print("No frames received for 5 seconds — stopping")
     except asyncio.CancelledError:
         pass
 
@@ -150,23 +151,19 @@ async def main() -> None:
 
     frame_queue: asyncio.Queue[tuple[bytes, int]] = asyncio.Queue(maxsize=16)
     stop_event = threading.Event()
-    ready_event = threading.Event()
     loop = asyncio.get_running_loop()
 
+    ready_event = threading.Event()
     cam_thread = threading.Thread(
         target=camera_thread,
         args=(frame_queue, loop, stop_event, ready_event),
         daemon=True,
     )
     cam_thread.start()
-
     print("Waiting for camera to connect...")
     await loop.run_in_executor(None, lambda: ready_event.wait(timeout=60))
-    if not ready_event.is_set() or not cam_thread.is_alive():
-        print("Camera failed to connect — aborting")
-        stop_event.set()
-        await room.disconnect()
-        return
+    if not cam_thread.is_alive():
+        print("Camera unavailable — continuing without video")
 
     try:
         await publish_frames(source, frame_queue, stop_event)
