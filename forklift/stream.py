@@ -5,6 +5,7 @@ Camera IP: 169.254.1.222
 """
 
 import asyncio
+import json
 import threading
 import time
 
@@ -117,6 +118,26 @@ async def main() -> None:
 
     source = rtc.VideoSource(WIDTH, HEIGHT)
     track = rtc.LocalVideoTrack.create_video_track("oak-camera", source)
+
+    @room.on("data_received")
+    def on_data_received(data_packet) -> None:
+        try:
+            msg = json.loads(data_packet.data.decode("utf-8"))
+        except Exception as e:
+            print(f"[data] Failed to parse: {e} — raw: {data!r}")
+            return
+
+        msg_type = msg.get("type")
+        if msg_type == "forklift-control":
+            direction = msg.get("direction", "?")
+            state = msg.get("state", "?")
+            sent_at = msg.get("sentAt", "")
+            print(f"[cmd] {direction} {state}  (sentAt={sent_at})")
+        elif msg_type == "forklift-heartbeat":
+            sent_at = msg.get("sentAt", "")
+            print(f"[heartbeat] sentAt={sent_at}")
+        else:
+            print(f"[data] Unknown message type: {msg!r}")
 
     print(f"Connecting to LiveKit room '{ROOM_NAME}'...")
     await room.connect(LIVEKIT_URL, token)
