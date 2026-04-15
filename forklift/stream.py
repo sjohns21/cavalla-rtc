@@ -6,17 +6,21 @@ Camera IP: 169.254.1.222
 
 import asyncio
 import json
+import os
 import threading
 import time
 
 import depthai as dai
+from dotenv import load_dotenv
 from livekit import rtc
 from livekit.api import AccessToken, VideoGrants
 
-LIVEKIT_URL = "wss://cavalla-pxnr4t34.livekit.cloud"
-LIVEKIT_API_KEY = "APIDL38BLr62tR2"
-LIVEKIT_API_SECRET = "Ve31E1uUqQBJPST5s1Leu8v8ViOBcoQ5oEVwVBHcvLJ"
-ROOM_NAME = "test-rig"
+load_dotenv()
+
+LIVEKIT_URL = os.environ["LIVEKIT_URL"]
+LIVEKIT_API_KEY = os.environ["LIVEKIT_API_KEY"]
+LIVEKIT_API_SECRET = os.environ["LIVEKIT_API_SECRET"]
+ROOM_NAME = os.environ.get("LIVEKIT_ROOM", "test-rig")
 CAMERA_IP = "169.254.1.222"
 
 WIDTH = 1280
